@@ -23,26 +23,35 @@ def getGraph(template):
         source = transition.find('source').get('ref')
         target = transition.find('target').get('ref')
         transition_id = transition.get('id')
-        Graph["edge"][transition_id] = (source, target)
+        Graph["edge"][transition_id] = (transition_id, source, target)
 
     return Graph
 
 
+def neighbours(graph, node):
+    neighbours = []
+    for edge in graph["edge"]:
+        if edge[1] == node:
+            neighbours.append(edge[2], edge[0])
+    return neighbours
+
+
+def dfs(node, visited, path):
+    visited[node] = True
+    path.append(node)
+
+    neighbours = neighbours(graph, node)
+    if neighbours is not None:
+        for neighbour in neighbours:
+            if neighbour not in visited:
+                dfs(neighbour, visited.copy(), path.copy())
+            elif neighbour in path:
+                cycle_start = path.index(neighbour)
+                cycle = path[cycle_start:]
+                cycles.append(cycle)
+
+
 def find_cycles(graph):
-    def dfs(node, visited, path):
-        visited[node] = True
-        path.append(node)
-
-        if node in graph['edge']:
-            neighbors = graph['edge'][node]
-            for neighbor in neighbors:
-                if neighbor not in visited:
-                    dfs(neighbor, visited.copy(), path.copy())
-                elif neighbor in path:
-                    cycle_start = path.index(neighbor)
-                    cycle = path[cycle_start:]
-                    cycles.append(cycle)
-
     cycles = []
     nodes = graph['node']
 
@@ -65,5 +74,4 @@ def main():
         print(cycles)
 
 
-if __name__ == "__main__":
-    main()
+main()
