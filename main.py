@@ -99,6 +99,52 @@ def suffCond(cycle, root):
         return False
 
 
+def syncCond(rpz, rz, root):
+    rz_copy = copy.deepcopy(rz)
+    for name, template in rpz.items():
+        print(rpz.items())
+        for cycle in template:
+            for transition in cycle[1]:
+                xml_trans = root.findall(
+                    ".//transition[@id='" + transition + "']")
+                synchronisations = xml_trans[0].findall(
+                    ".//label[@kind='synchronisation']")
+                for synchronisation in synchronisations:
+                    print(synchronisation.text)
+                    synchronisation_text = synchronisation.text
+                    while synchronisation_text[-1] == " ":
+                        synchronisation_text = synchronisation_text[:-1]
+                    if synchronisation_text[-1] == "?":
+                        # chercher synchronisation[:len(synchronisation)-1] dans les cycles de sync_rp[name]
+                        for rz_name, rz_template in rz_copy.items():
+                            for rz_cycle in rz[rz_name]:
+                                for rz_transition in rz_cycle[1]:
+                                    xml_trans_rz = root.findall(
+                                        ".//transition[@id='" + rz_transition + "']")
+                                    synchronisations_rz = xml_trans_rz[0].findall(
+                                        ".//label[@kind='synchronisation']")
+                                    for synchro in synchronisations_rz:
+                                        synchro_text = synchro.text
+                                        while synchro_text[-1] == " ":
+                                            synchro_text = synchro_text[:-1]
+                                        if synchro_text[-1] == "!":
+                                            if synchro_text[:-1] == synchronisation_text[:-1]:
+                                                if cycle not in rz[name]:
+                                                    rz_copy[name].append(cycle)
+                                                    print("Appended to "+name)
+    return rz_copy
+
+
+def reverse(results, results_nz):
+    output = {}
+    for name, template in results.items():
+        output[name] = []
+        for cycle in template:
+            if cycle not in results_nz[name]:
+                output[name].append(cycle)
+    return output
+
+
 def main():
     tree = ET.parse('train-gate.xml')
     root = tree.getroot()
@@ -142,37 +188,12 @@ def main():
                 results_zeno[name].append(cycle)
             else:
                 results_potential_zeno[name].append(cycle)
+    print(results_potential_zeno)
+    rz = syncCond(results_potential_zeno, results_zeno, root)
 
-    return results, results_zeno, results_potential_zeno
-
-
-"""if __name__ == "__main__":
-    main()
-"""
+    rnz = reverse(results, rz)
+    return rnz
 
 
-"""tree = ET.parse('train-gate.xml')
-root = tree.getroot()
-
-resetChecker(["id3", "id1"], root)"""
-"""string = "    x:=0   , y<=10    "
-print(string)
-clock = get_clock_name(string, "<")
-print(clock)"""
-
-"""tree = ET.parse('train-gate.xml')
-root = tree.getroot()
-
-cycle = [[], ["id7", "id6"]]
-
-boolean = suffCond(cycle, root)
-
-print(boolean)"""
-
-r, rz, rpz = main()
-print("All cycles found :")
-print(r)
-print("All cycles that verify the sufficient condition :")
-print(rz)
-print("All cycles that do not verify the sufficient condition :")
-print(rpz)
+rnz = main()
+print(rnz)
