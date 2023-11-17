@@ -23,7 +23,7 @@ def parse_template(template):
     return G
 
 
-def parralels(template):
+def parallels(template):
     transitions = template.findall('.//transition')
     trans = {}
     for transition in transitions:
@@ -40,19 +40,19 @@ def parralels(template):
         else:
             flipped[value].append(key)
 
-    parralels = []
+    parallels = []
 
     for key, value in flipped.items():
         if len(value) > 1:
-            parralels.append(value)
-    return parralels
+            parallels.append(value)
+    return parallels
 
 
 def find_cycles(template):
     G = parse_template(template)
     cycles = list(nx.simple_cycles(G))
-    parra = parralels(template)
-    return cycles, G, parra
+    para = parallels(template)
+    return cycles, G, para
 
 
 def get_clock_name(text, value):
@@ -135,9 +135,6 @@ def syncCond(rpz, rnz, root):
                                                 if cycle not in rnz_copy[name]:
                                                     rnz_copy[name].append(
                                                         cycle)
-                                                    print(cycle)
-                                                    print(
-                                                        " added to "+name)
     return rnz_copy
 
 
@@ -159,7 +156,7 @@ def main(path):
     results = {}
     for template in templates:
         template_name = template.find('name').text
-        cycles, G, parra = find_cycles(template)
+        cycles, G, para = find_cycles(template)
         result = []
         for cycle in cycles:
             transitions = []
@@ -174,13 +171,13 @@ def main(path):
             """print(f"  Locations: {', '.join(cycle)}, Transitions: {
                   ', '.join(transitions)}")"""
         for cycle in copy.deepcopy(result):
-            for parralel in parra:
-                for par in parralel:
+            for parallel in para:
+                for par in parallel:
                     if par in cycle[1]:
                         idx = cycle[1].index(par)
-                        par_idx = parralel.index(par)
+                        par_idx = parallel.index(par)
                         new_cycle = [cycle[0], cycle[1]
-                                     [:idx]+[parralel[1-par_idx]]+cycle[1][idx+1:]]
+                                     [:idx]+[parallel[1-par_idx]]+cycle[1][idx+1:]]
                         result.append(new_cycle)
 
         results[template_name] = result
