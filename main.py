@@ -192,18 +192,21 @@ def main(path):
             else:
                 results_potential_zeno[name].append(cycle)
 
-    print("According to the sufficient condition, the zenoless cycles are:")
-    print(results_non_zeno)
-    print("The potential zeno cycles are :")
-    print(results_potential_zeno)
     rnz = syncCond(results_potential_zeno, results_non_zeno, root)
-    print("After adding the zenoless cycles according to the sync condition, the zenoless cycles are :")
-    print(rnz)
     rz = reverse(results, rnz)
-    print("Finally, the zeno cycles are :")
-    print(rz)
+
+    is_zeno = False
+    for template in rz.values():
+        if template != []:
+            is_zeno = True
+
+    if is_zeno:
+        print("Votre système possède un ou plusieurs cycles zeno :")
+        print(rz)
+    else:
+        print("Votre système ne possède aucun cycle zeno.")
 
 
 if __name__ == "__main__":
-    path = 'train-gate.xml'
+    path = 'data/fischer.xml'
     main(path)
