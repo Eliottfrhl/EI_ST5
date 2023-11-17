@@ -77,21 +77,24 @@ def suffCond(cycle, root):
         assignments = xml_trans[0].findall(".//label[@kind='assignment']")
         guards = xml_trans[0].findall(".//label[@kind='guard']")
         for assignment in assignments:
-            if "=0" in assignment.text:
-                clock_name = get_clock_name(assignment.text, "=0")
+            assignment_text = "".join(assignment.text.split(" "))
+            if "=0" in assignment_text:
+                clock_name = get_clock_name(assignment_text, "=0")
                 if clock_name in result.keys():
                     result[clock_name][0] = True
                 else:
                     result[clock_name] = [True, False]
         for guard in guards:
-            if ">" in guard.text:
-                clock_name = get_clock_name(guard.text, ">")
+            guard_text = "".join(guard.text.split(" "))
+            if ">" in guard_text:
+                clock_name = get_clock_name(guard_text, ">")
                 if clock_name in result.keys():
                     result[clock_name][1] = True
                 else:
                     result[clock_name] = [False, True]
     if result == {}:
         return False
+
     else:
         for name, booleans in result.items():
             if booleans == [True, True]:
@@ -99,10 +102,9 @@ def suffCond(cycle, root):
         return False
 
 
-def syncCond(rpz, rz, root):
-    rz_copy = copy.deepcopy(rz)
+def syncCond(rpz, rnz, root):
+    rnz_copy = copy.deepcopy(rnz)
     for name, template in rpz.items():
-        print(rpz.items())
         for cycle in template:
             for transition in cycle[1]:
                 xml_trans = root.findall(
@@ -110,29 +112,33 @@ def syncCond(rpz, rz, root):
                 synchronisations = xml_trans[0].findall(
                     ".//label[@kind='synchronisation']")
                 for synchronisation in synchronisations:
-                    print(synchronisation.text)
-                    synchronisation_text = synchronisation.text
-                    while synchronisation_text[-1] == " ":
-                        synchronisation_text = synchronisation_text[:-1]
+                    synchronisation_text = "".join(
+                        synchronisation.text.split(" "))
                     if synchronisation_text[-1] == "?":
                         # chercher synchronisation[:len(synchronisation)-1] dans les cycles de sync_rp[name]
-                        for rz_name, rz_template in rz_copy.items():
-                            for rz_cycle in rz[rz_name]:
-                                for rz_transition in rz_cycle[1]:
-                                    xml_trans_rz = root.findall(
-                                        ".//transition[@id='" + rz_transition + "']")
-                                    synchronisations_rz = xml_trans_rz[0].findall(
+                        for rnz_name, rnz_template in rnz_copy.items():
+                            for rnz_cycle in rnz_template:
+                                for rnz_transition in rnz_cycle[1]:
+                                    xml_trans_rnz = root.findall(
+                                        ".//transition[@id='" + rnz_transition + "']")
+                                    synchronisations_rnz = xml_trans_rnz[0].findall(
                                         ".//label[@kind='synchronisation']")
-                                    for synchro in synchronisations_rz:
-                                        synchro_text = synchro.text
-                                        while synchro_text[-1] == " ":
-                                            synchro_text = synchro_text[:-1]
+                                    for synchro in synchronisations_rnz:
+                                        synchro_text = "".join(
+                                            synchro.text.split(" "))
                                         if synchro_text[-1] == "!":
-                                            if synchro_text[:-1] == synchronisation_text[:-1]:
-                                                if cycle not in rz[name]:
-                                                    rz_copy[name].append(cycle)
-                                                    print("Appended to "+name)
-    return rz_copy
+                                            synchro_text = synchro_text.split("[")[
+                                                0]
+                                            synchronisation_text = synchronisation_text.split("[")[
+                                                0]
+                                            if synchro_text == synchronisation_text:
+                                                if cycle not in rnz_copy[name]:
+                                                    rnz_copy[name].append(
+                                                        cycle)
+                                                    print(cycle)
+                                                    print(
+                                                        " added to "+name)
+    return rnz_copy
 
 
 def reverse(results, results_nz):
@@ -145,8 +151,8 @@ def reverse(results, results_nz):
     return output
 
 
-def main():
-    tree = ET.parse('train-gate.xml')
+def main(path):
+    tree = ET.parse(path)
     root = tree.getroot()
     transitions = root.findall('.//transition')
     templates = root.findall('.//template')
@@ -178,22 +184,29 @@ def main():
                         result.append(new_cycle)
 
         results[template_name] = result
-    results_zeno = {}
+    results_non_zeno = {}
     results_potential_zeno = {}
     for name, template in results.items():
-        results_zeno[name] = []
+        results_non_zeno[name] = []
         results_potential_zeno[name] = []
         for cycle in template:
             if suffCond(cycle, root):
-                results_zeno[name].append(cycle)
+                results_non_zeno[name].append(cycle)
             else:
                 results_potential_zeno[name].append(cycle)
+
+    print("According to the sufficient condition, the zenoless cycles are:")
+    print(results_non_zeno)
+    print("The potential zeno cycles are :")
     print(results_potential_zeno)
-    rz = syncCond(results_potential_zeno, results_zeno, root)
+    rnz = syncCond(results_potential_zeno, results_non_zeno, root)
+    print("After adding the zenoless cycles according to the sync condition, the zenoless cycles are :")
+    print(rnz)
+    rz = reverse(results, rnz)
+    print("Finally, the zeno cycles are :")
+    print(rz)
 
-    rnz = reverse(results, rz)
-    return rnz
 
-
-rnz = main()
-print(rnz)
+if __name__ == "__main__":
+    path = 'train-gate.xml'
+    main(path)
